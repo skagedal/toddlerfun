@@ -12,6 +12,7 @@
 
 static const gint gamine_effect_min = 0;
 static const gint gamine_effect_max = 8;
+static const gdouble gamine_color_cycle_distance = 2000;
 
 typedef struct { 
 	GtkWidget *window;
@@ -22,7 +23,7 @@ typedef struct {
 	gint previous_y;
 	gint brighten_count;
 	gint effect_num;
-	gdouble line_hue;
+	gdouble traveled_distance;
 
 	// These are active during a draw
 	cairo_region_t *region;
@@ -203,6 +204,30 @@ on_draw(GtkWidget *window,
 	return FALSE;
 }
 
+static void
+update_color (Gamine *gamine,
+			  cairo_t *cr)
+{
+	gdouble hue, r, g, b;
+	if (gamine->has_previous) {
+		gdouble new_distance;
+		gint xdiff, ydiff;
+
+		xdiff = gamine->x - gamine->previous_x;
+		ydiff = gamine->y - gamine->previous_y;
+		new_distance = sqrt(xdiff * xdiff + ydiff * ydiff);
+
+		gamine->traveled_distance += new_distance;
+		while (gamine->traveled_distance > gamine_color_cycle_distance)
+			gamine->traveled_distance -= gamine_color_cycle_distance;
+	}
+
+	hue = gamine->traveled_distance / gamine_color_cycle_distance;
+	gtk_hsv_to_rgb (hue, 1.0, 1.0, &r, &g, &b);
+
+	cairo_set_source_rgba (cr, r, g, b, 0.3);
+}
+
 static gboolean
 on_motion_notify (GtkWidget *widget,
 				  GdkEventButton *event,
@@ -215,6 +240,8 @@ on_motion_notify (GtkWidget *widget,
 	gamine->region = cairo_region_create ();
 	gamine->x = event->x;
 	gamine->y = event->y;
+
+	update_color (gamine, cr);
 	draw_line (gamine, cr);
 
 	cairo_destroy(cr);
