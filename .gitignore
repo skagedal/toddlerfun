@@ -1,0 +1,17 @@
+*~
+skamine
+*.o
+.deps
+INSTALL
+Makefile
+Makefile.in
+aclocal.m4
+config.log
+config.h
+config.h.in
+config.status
+stamp-h1
+configure
+libtool
+m4
+build-aux
