@@ -12,8 +12,11 @@ AC_PROG_LIBTOOL
 
 AM_PATH_GTK_3_0([3.0.0],,AC_MSG_ERROR([Gtk+ 3.0.0 or higher required.]))
 
+# AM_GNU_GETTEXT
+
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([
         Makefile
+	po/Makefile
 ])
 AC_OUTPUT

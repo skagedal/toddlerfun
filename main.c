@@ -6,9 +6,14 @@
  */
 
 #include <config.h>
+#include <math.h>
+#include <glib/gi18n.h>
 #include <gtk/gtk.h>
 
-#include <glib/gi18n.h>
+/* FIXME: this should be done the proper way */
+#define ENABLE_NLS
+#define GETTEXT_PACKAGE "skamine"
+#define PACKAGE_LOCALE_DIR "po"
 
 static const gint gamine_effect_min = 0;
 static const gint gamine_effect_max = 8;
@@ -304,7 +309,7 @@ on_key_press(GtkWidget *widget,
 }
 
 static GtkWidget*
-create_window (Gamine *gamine)
+create_window (Gamine *gamine, gboolean fullscreen)
 {
 	GtkWidget *window, *darea;
 
@@ -313,7 +318,10 @@ create_window (Gamine *gamine)
 	gtk_container_add (GTK_CONTAINER (window), darea);
 
 	gtk_window_set_title (GTK_WINDOW (window), "Gamine");
-//	gtk_window_fullscreen(GTK_WINDOW (window));
+	if (fullscreen)
+		gtk_window_fullscreen (GTK_WINDOW (window));
+	else 
+		gtk_window_set_default_size (GTK_WINDOW (window), 400, 400);
 
 	g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
 	g_signal_connect (darea, "draw", G_CALLBACK (on_draw), gamine);
@@ -340,7 +348,23 @@ main (int argc, char *argv[])
 {
 	Gamine *gamine;
  	GtkWidget *window;
+	GOptionContext *option_context;
+	GError *error = NULL;
+	gboolean no_fullscreen = FALSE;
+	gboolean no_music = FALSE;
+	gboolean no_sound_fx = FALSE;
 
+	GOptionEntry options [] =
+	{
+		{ "no-fullscreen", 'F', 0, G_OPTION_ARG_NONE, &no_fullscreen,
+		  N_("Don't run in fullscreen mode"), NULL },
+		{ "no-music", 'M', 0, G_OPTION_ARG_NONE, &no_music,
+		  N_("Don't play music"), NULL },
+		{ "no-sound-fx", 'S', 0, G_OPTION_ARG_NONE, &no_sound_fx,
+		  N_("Don't play sound effects"), NULL }
+	};
+
+	setlocale(LC_ALL, "");
 
 #ifdef ENABLE_NLS
 	bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
@@ -349,10 +373,24 @@ main (int argc, char *argv[])
 #endif
 
 	gamine = g_new0(Gamine, 1);
-	
+
+	g_set_prgname("skamine");
+	g_set_application_name(_("Toddler Fun"));
+	option_context = g_option_context_new (NULL);
+	g_option_context_set_translation_domain(option_context, GETTEXT_PACKAGE);
+	g_option_context_set_summary(option_context, "A drawing toy for toddlers.");
+	g_option_context_add_main_entries(option_context, options, 
+                                      GETTEXT_PACKAGE);
+	g_option_context_add_group (option_context, gtk_get_option_group (TRUE));
+
+	if (!g_option_context_parse (option_context, &argc, &argv, &error)) {
+			g_print ("option parsing failed: %s\n", error->message);
+			return (1);
+    }
+
 	gtk_init (&argc, &argv);
 
-	window = create_window (gamine);
+	window = create_window (gamine, !no_fullscreen);
 	gtk_widget_show_all (window);
 
 //	gtk_widget_set_app_paintable(gamine->darea, TRUE);

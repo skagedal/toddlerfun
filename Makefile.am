@@ -2,6 +2,8 @@
 
 ACLOCAL_AMFLAGS = -I m4
 
+SUBDIRS = po
+
 bin_PROGRAMS = skamine
 skamine_SOURCES = main.c
 skamine_CPPFLAGS = @GTK_CFLAGS@
