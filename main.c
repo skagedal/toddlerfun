@@ -9,6 +9,7 @@
 #include <math.h>
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
+#include <librsvg/rsvg.h>
 
 /* FIXME: this should be done the proper way */
 #define ENABLE_NLS
@@ -18,6 +19,13 @@
 static const gint gamine_effect_min = 0;
 static const gint gamine_effect_max = 8;
 static const gdouble gamine_color_cycle_distance = 2000;
+static const gdouble gamine_svg_size = 100;
+static const gdouble gamine_min_rotation = G_PI * -0.2;
+static const gdouble gamine_max_rotation = G_PI * 0.2;
+
+static const gchar *gamine_image_file_names [] = 
+{ "images/baby.svg", "images/cat.svg", "images/sheep.svg" };
+#define NUM_IMAGES (sizeof(gamine_image_file_names)/sizeof (gchar *))
 
 typedef struct { 
 	GtkWidget *window;
@@ -29,11 +37,15 @@ typedef struct {
 	gint brighten_count;
 	gint effect_num;
 	gdouble traveled_distance;
+	
+	RsvgHandle *images[NUM_IMAGES];
 
 	// These are active during a draw
 	cairo_region_t *region;
 	gint x;
 	gint y;
+	gint image_num;
+	gdouble image_rotation;
 } Gamine;
 
 typedef void (*GamineDrawFunc) (Gamine *gamine, cairo_t *cr);
@@ -66,8 +78,9 @@ max_doubles (double *arr, int n)
 	return found_max;
 }
 
-static void 
-add_stroke_to_region(Gamine *gamine, cairo_t *cr)
+static void
+add_user_rectangle_to_region (Gamine *gamine, cairo_t *cr,
+							  double x1, double y1, double x2, double y2)
 {
 	const int TOP_LEFT = 0;
 	const int BOTTOM_RIGHT = 1;
@@ -78,18 +91,10 @@ add_stroke_to_region(Gamine *gamine, cairo_t *cr)
 	cairo_status_t status;
 	int i;
 
-	cairo_stroke_extents (cr, 
-						  &x[TOP_LEFT], &y[TOP_LEFT], 
-						  &x[BOTTOM_RIGHT], &y[BOTTOM_RIGHT]);
-	/*
-	g_message("Stroke extents: (%f, %f), (%f, %f)\n",
-			  x[TOP_LEFT], y[TOP_LEFT], x[BOTTOM_RIGHT], y[BOTTOM_RIGHT]);
-	*/
-
-	x[TOP_RIGHT] = x[BOTTOM_RIGHT];
-	y[TOP_RIGHT] = y[TOP_LEFT];
-	x[BOTTOM_LEFT] = x[TOP_LEFT];
-	y[BOTTOM_LEFT] = y[BOTTOM_RIGHT];
+	x[TOP_LEFT] = x[BOTTOM_LEFT] = x1;
+	y[TOP_LEFT] = y[TOP_RIGHT] = y1;
+	x[BOTTOM_RIGHT] = x[TOP_RIGHT] = x2;
+	y[BOTTOM_RIGHT] = y[BOTTOM_LEFT] = y2;
 
 	for (i = 0; i < 4; i++)
 		cairo_user_to_device (cr, &x[i], &y[i]);
@@ -101,12 +106,14 @@ add_stroke_to_region(Gamine *gamine, cairo_t *cr)
 
 	status = cairo_region_union_rectangle(gamine->region, &rectangle);
 	g_assert(status == CAIRO_STATUS_SUCCESS);
+}
 
-	/*
-	g_message("Rectangle: (%d, %d), (%d, %d)\n",
-			  rectangle.x, rectangle.y, 
-			  rectangle.x + rectangle.width, rectangle.y + rectangle.height);
-	*/
+static void 
+add_stroke_to_region(Gamine *gamine, cairo_t *cr)
+{
+	double x1, y1, x2, y2;
+	cairo_stroke_extents (cr, &x1, &y1, &x2, &y2);
+	add_user_rectangle_to_region (gamine, cr, x1, y1, x2, y2);
 }
 
 static void 
@@ -119,6 +126,67 @@ draw_line(Gamine *gamine, cairo_t *cr)
 	cairo_line_to (cr, gamine->x, gamine->y);
 	add_stroke_to_region (gamine, cr);
 	cairo_stroke (cr);
+}
+
+
+static void
+draw_image(Gamine *gamine, cairo_t *cr)
+{
+	RsvgHandle *handle = gamine->images[gamine->image_num];
+	RsvgDimensionData dimension;
+	gdouble hypothenuse, scale;
+
+	cairo_save (cr);
+	
+	rsvg_handle_get_dimensions (handle, &dimension);
+	hypothenuse = sqrt(dimension.width * dimension.width + 
+					   dimension.height * dimension.height);
+	scale = gamine_svg_size / hypothenuse;
+
+	cairo_translate (cr, gamine->x, gamine->y);
+	cairo_scale (cr, scale, scale);
+	cairo_translate (cr, -dimension.width / 2, -dimension.height / 2);
+	cairo_rotate (cr, gamine->image_rotation);
+	rsvg_handle_render_cairo (handle, cr);
+
+	add_user_rectangle_to_region (gamine, cr, 0, 0, 
+								  dimension.width, dimension.height);
+
+	cairo_restore (cr);
+}
+
+static void 
+draw_effect (Gamine *gamine,
+			 cairo_t *cr,
+			 GamineDrawFunc draw)
+{
+    cairo_surface_t *surface = gamine->surface;
+    int width = cairo_image_surface_get_width(surface);
+    int height = cairo_image_surface_get_height(surface);
+    int mirror = gamine->effect_num > 0;
+    int rotations = gamine->effect_num > 0 ? gamine->effect_num : 1;
+    double angle_step = G_PI * 2 / rotations;
+    int center_x = width / 2;
+    int center_y = height / 2;
+    int rot;
+
+    cairo_save(cr);
+    for (rot = 0; rot < rotations; rot++) {
+        cairo_translate (cr, center_x, center_y);
+        cairo_rotate (cr, angle_step);
+        cairo_translate (cr, -center_x, -center_y);
+        (*draw) (gamine, cr);
+        if (mirror) {
+            cairo_save (cr);
+            cairo_translate (cr, center_x, center_y);
+            cairo_scale (cr, -1, 1);
+            cairo_translate (cr, -center_x, -center_y);
+            (*draw) (gamine, cr);
+            cairo_restore (cr);
+        }
+    }
+    cairo_restore(cr);
+	
 }
 
 static void
@@ -153,35 +221,40 @@ on_configure(GtkWidget *widget,
 		     gpointer user_data)
 {
 	Gamine *gamine;
-	GdkWindow *window;
-	gint width, height;
+	gint width, height, old_width, old_height;
+	cairo_surface_t *old_surface = NULL;
 
 	gamine = (Gamine *) user_data;
 	width = gtk_widget_get_allocated_width (widget);
 	height = gtk_widget_get_allocated_height (widget);
 
-	if (gamine->surface != NULL) {
-		if (cairo_image_surface_get_width (gamine->surface) == width &&
-			cairo_image_surface_get_height (gamine->surface) == height) {
-			return TRUE;
-		}
+	old_surface = gamine->surface;
 
-		cairo_surface_destroy (gamine->surface);
+	if (old_surface != NULL) {
+		old_width = cairo_image_surface_get_width (old_surface);
+		old_height = cairo_image_surface_get_height (old_surface);
+
+		if (old_width == width && old_height == height) 
+			return TRUE;
 	}
 	
-	window = gtk_widget_get_window (widget);
-
-// What would be the benifit of doing this instead?
-//	gamine->surface = gdk_window_create_similar_surface (window, 
-//														 CAIRO_CONTENT_COLOR,
-//														 width, height);
-
 	gamine->surface = cairo_image_surface_create (CAIRO_FORMAT_RGB24,
-	width, height);
+												  width, height);
 
-	printf("Created surface of size %d, %d\n", width, height);
+	if (old_surface != NULL) {
+		cairo_t *cr = cairo_create (gamine->surface);
+		cairo_scale (cr, 
+					 (gdouble) width / (gdouble) old_width,
+					 (gdouble) height / (gdouble) old_height);
+		cairo_set_source_surface (cr, old_surface, 0, 0);
+		cairo_paint (cr);
+		cairo_destroy (cr);
+		cairo_surface_destroy (old_surface);
+	} else {
+		surface_clear(gamine);
+	}
 
-	surface_clear(gamine);
+	gamine->has_previous = FALSE;
 	
 	return TRUE;
 }
@@ -230,7 +303,7 @@ update_color (Gamine *gamine,
 	hue = gamine->traveled_distance / gamine_color_cycle_distance;
 	gtk_hsv_to_rgb (hue, 1.0, 1.0, &r, &g, &b);
 
-	cairo_set_source_rgba (cr, r, g, b, 0.3);
+	cairo_set_source_rgba (cr, r, g, b, 0.7);
 }
 
 static gboolean
@@ -247,7 +320,9 @@ on_motion_notify (GtkWidget *widget,
 	gamine->y = event->y;
 
 	update_color (gamine, cr);
-	draw_line (gamine, cr);
+
+//	draw_line (gamine, cr);
+	draw_effect (gamine, cr, &draw_line);
 
 	cairo_destroy(cr);
 
@@ -262,6 +337,32 @@ on_motion_notify (GtkWidget *widget,
 
 	return TRUE;
 }				 
+
+static gboolean
+on_button_press (GtkWidget *widget,
+				 GdkEventButton *event,
+				 Gamine *gamine)
+{
+	cairo_t *cr = cairo_create (gamine->surface);
+	
+	gamine->region = cairo_region_create ();
+	gamine->x = event->x;
+	gamine->y = event->y;
+	gamine->image_num = g_random_int_range (0, NUM_IMAGES);
+	gamine->image_rotation = g_random_double_range (gamine_min_rotation,
+													gamine_max_rotation);
+
+//	draw_image (gamine, cr);
+	draw_effect (gamine, cr, &draw_image);
+	
+	cairo_destroy(cr);
+
+	gtk_widget_queue_draw_region (widget, gamine->region);
+	cairo_region_destroy(gamine->region);
+	gamine->region = NULL;
+
+	return TRUE;
+}
 
 static gboolean
 on_brighten_timeout(gpointer user_data)
@@ -288,6 +389,40 @@ brighten_quickly(Gamine *gamine)
 	g_timeout_add (1000 / 30, on_brighten_quickly_timeout, gamine);
 }
 
+static void
+effect_up (Gamine *gamine)
+{
+	if (gamine->effect_num < gamine_effect_max) {
+		brighten_quickly (gamine);
+		gamine->effect_num++;
+	}
+}
+
+static void
+effect_down (Gamine *gamine)
+{
+	if (gamine->effect_num > gamine_effect_min) {
+		brighten_quickly (gamine);
+		gamine->effect_num--;
+	}
+}
+
+static gboolean
+on_scroll (GtkWidget *widget,
+		   GdkEventScroll *event,
+		   Gamine *gamine)
+{
+	if (event->direction == GDK_SCROLL_UP) {
+		effect_up (gamine);
+		return TRUE;
+	}
+	if (event->direction == GDK_SCROLL_DOWN) {
+		effect_down (gamine);
+		return TRUE;
+	}
+	return FALSE;
+}
+
 static gboolean
 on_key_press(GtkWidget *widget,
 			 GdkEventKey *event,
@@ -296,12 +431,21 @@ on_key_press(GtkWidget *widget,
 	if (event->type == GDK_KEY_PRESS) {
 		switch (event->keyval) {
 		case GDK_KEY_space:
-			brighten_quickly(gamine);
+			brighten_quickly (gamine);
 			return TRUE;
 
 		case GDK_KEY_q:
 			gtk_main_quit();
 			return TRUE;
+
+		case GDK_KEY_Up:
+			effect_up (gamine);
+            break;
+
+		case GDK_KEY_Down:
+			effect_down (gamine);
+            break;
+
 		}
 	}
 
@@ -329,19 +473,37 @@ create_window (Gamine *gamine, gboolean fullscreen)
 					  G_CALLBACK (on_configure), gamine); 
     g_signal_connect (darea, "motion_notify_event",
 					  G_CALLBACK (on_motion_notify), gamine);
-/*	g_signal_connect (darea, "button_press_event", 
-	G_CALLBACK (on_button_press), gamine); */
+	g_signal_connect (darea, "button_press_event", 
+					  G_CALLBACK (on_button_press), gamine); 
+	g_signal_connect (darea, "scroll_event",
+					  G_CALLBACK (on_scroll), gamine);
     g_signal_connect (window, "key_press_event",
 					  G_CALLBACK (on_key_press), gamine);
 	gtk_widget_set_events(darea,
 						  gtk_widget_get_events(window) | 
 						  GDK_BUTTON_PRESS_MASK |
-						  GDK_POINTER_MOTION_MASK);
-	g_timeout_add_seconds(10, on_brighten_timeout, gamine);
+						  GDK_POINTER_MOTION_MASK |
+						  GDK_SCROLL_MASK);
+	g_timeout_add_seconds(2, on_brighten_timeout, gamine);
 		
 	return window;
 }
 
+static void
+load_images (Gamine *gamine) 
+{
+	int i;
+	GError *error = NULL;
+	for (i = 0; i < NUM_IMAGES; i++) {
+		const gchar *file_name = gamine_image_file_names[i];
+		gamine->images[i] = rsvg_handle_new_from_file (file_name, &error);
+		if (error != NULL) {
+			fprintf (stderr, "When loading %s:\n", file_name);
+			fprintf (stderr, "Error: %s\n", error->message);
+			g_clear_error (&error);
+		}
+	}
+}
 
 int
 main (int argc, char *argv[])
@@ -389,6 +551,8 @@ main (int argc, char *argv[])
     }
 
 	gtk_init (&argc, &argv);
+
+	load_images (gamine);
 
 	window = create_window (gamine, !no_fullscreen);
 	gtk_widget_show_all (window);
