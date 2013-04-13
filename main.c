@@ -10,6 +10,7 @@
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
 #include <librsvg/rsvg.h>
+#include "theme.h"
 
 /* FIXME: this should be done the proper way */
 #define ENABLE_NLS
@@ -23,10 +24,6 @@ static const gdouble gamine_svg_size = 100;
 static const gdouble gamine_min_rotation = G_PI * -0.2;
 static const gdouble gamine_max_rotation = G_PI * 0.2;
 
-static const gchar *gamine_image_file_names [] = 
-{ "images/baby.svg", "images/cat.svg", "images/sheep.svg" };
-#define NUM_IMAGES (sizeof(gamine_image_file_names)/sizeof (gchar *))
-
 typedef struct { 
 	GtkWidget *window;
 	GtkWidget *darea;
@@ -37,14 +34,14 @@ typedef struct {
 	gint brighten_count;
 	gint effect_num;
 	gdouble traveled_distance;
-	
-	RsvgHandle *images[NUM_IMAGES];
+
+	GamineTheme *theme;
 
 	// These are active during a draw
 	cairo_region_t *region;
 	gint x;
 	gint y;
-	gint image_num;
+	gint object_num;
 	gdouble image_rotation;
 } Gamine;
 
@@ -132,9 +129,18 @@ draw_line(Gamine *gamine, cairo_t *cr)
 static void
 draw_image(Gamine *gamine, cairo_t *cr)
 {
-	RsvgHandle *handle = gamine->images[gamine->image_num];
+	GamineThemeObject *obj;
+	RsvgHandle *handle;
 	RsvgDimensionData dimension;
 	gdouble hypothenuse, scale;
+
+	obj = theme_get_object(gamine->theme, gamine->object_num);
+	if (obj == NULL)
+		return;
+
+	handle = obj->image_handle;
+	if (obj == NULL)
+		return;
 
 	cairo_save (cr);
 	
@@ -343,12 +349,14 @@ on_button_press (GtkWidget *widget,
 				 GdkEventButton *event,
 				 Gamine *gamine)
 {
+	gint num_objects;
 	cairo_t *cr = cairo_create (gamine->surface);
-	
+
 	gamine->region = cairo_region_create ();
 	gamine->x = event->x;
 	gamine->y = event->y;
-	gamine->image_num = g_random_int_range (0, NUM_IMAGES);
+	num_objects = gamine->theme->theme_objects->len;
+	gamine->object_num = g_random_int_range (0, num_objects);
 	gamine->image_rotation = g_random_double_range (gamine_min_rotation,
 													gamine_max_rotation);
 
@@ -489,18 +497,37 @@ create_window (Gamine *gamine, gboolean fullscreen)
 	return window;
 }
 
-static void
-load_images (Gamine *gamine) 
+static RsvgHandle *
+load_image (const gchar *file_name) 
 {
-	int i;
 	GError *error = NULL;
-	for (i = 0; i < NUM_IMAGES; i++) {
-		const gchar *file_name = gamine_image_file_names[i];
-		gamine->images[i] = rsvg_handle_new_from_file (file_name, &error);
-		if (error != NULL) {
-			fprintf (stderr, "When loading %s:\n", file_name);
-			fprintf (stderr, "Error: %s\n", error->message);
-			g_clear_error (&error);
+	RsvgHandle *handle;
+
+	handle = rsvg_handle_new_from_file (file_name, &error);
+	if (error != NULL) {
+		fprintf (stderr, "Can't load %s: %s\n", file_name, error->message);
+		g_clear_error (&error);
+		return NULL;
+	}
+
+	return handle;
+}
+
+static void
+load_theme (Gamine *gamine)
+{
+	gamine->theme = theme_new ();
+	theme_read (gamine->theme, "defaulttheme/theme.xml");
+	if (gamine->theme->parsed_ok) {
+		gint i;
+		gint len = theme_get_n_objects (gamine->theme);
+		printf ("We have %d theme objects.\n", len);
+		for (i = 0; i < len; i++) {
+			GamineThemeObject *obj = theme_get_object (gamine->theme, i);
+			if (obj->image_file != NULL) {
+				printf ("Now it's %s.\n", obj->image_file);
+				obj->image_handle = load_image (obj->image_file);
+			}
 		}
 	}
 }
@@ -552,7 +579,7 @@ main (int argc, char *argv[])
 
 	gtk_init (&argc, &argv);
 
-	load_images (gamine);
+	load_theme (gamine);
 
 	window = create_window (gamine, !no_fullscreen);
 	gtk_widget_show_all (window);

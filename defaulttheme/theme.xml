@@ -1,0 +1,7 @@
+<toddler_theme>
+  <objects>
+    <object sound="cat.ogg" image="cat.svg" />
+    <object sound="sheep.ogg" image="sheep.svg" />
+    <object sound="baby.ogg" image="baby.svg" />
+  </objects>
+</toddler_theme>
