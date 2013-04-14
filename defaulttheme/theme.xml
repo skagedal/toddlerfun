@@ -1,4 +1,5 @@
 <toddler_theme>
+  <background sound="bach.ogg" />
   <objects>
     <object sound="cat.ogg" image="cat.svg" />
     <object sound="sheep.ogg" image="sheep.svg" />

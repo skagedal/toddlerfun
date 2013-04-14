@@ -8,6 +8,7 @@ typedef struct {
 
 typedef struct {
 	GArray *theme_objects;
+	gchar *background_sound_file;
 	gboolean parsed_ok;
 } GamineTheme;
 

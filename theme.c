@@ -17,6 +17,21 @@ typedef struct {
 	gchar *dirname;
 } GamineThemeParser;
 
+static gchar *
+get_attribute (const char *name,
+			   const gchar **attribute_names,
+			   const gchar **attribute_values)
+{
+	while (*attribute_names != NULL) {
+		if (strcmp (*attribute_names, name) == 0) 
+			return *attribute_values;
+
+		attribute_names++;
+		attribute_values++;
+	}
+	return NULL;
+}
+
 static void parser_start_element (GMarkupParseContext *context,
 								  const gchar         *element_name,
 								  const gchar        **attribute_names,
@@ -26,10 +41,12 @@ static void parser_start_element (GMarkupParseContext *context,
 {
 	GamineThemeParser *parser = (GamineThemeParser *) user_data;
 	fprintf (stderr, "start element: %s\n", element_name);
+
 	if (strcmp (element_name, "objects") == 0) {
 		guint size = sizeof (GamineThemeObject);
 		if (parser->theme->theme_objects == NULL) 
 			parser->theme->theme_objects = g_array_new (FALSE, TRUE, size);
+
 	} else if (strcmp (element_name, "object") == 0) {
 		GamineThemeObject obj;
 		memset (&obj, 0, sizeof (GamineThemeObject));
@@ -53,6 +70,14 @@ static void parser_start_element (GMarkupParseContext *context,
 		}
 
 		g_array_append_val (parser->theme->theme_objects, obj);
+
+	} else if (strcmp (element_name, "background") == 0) {
+		const gchar *basename = get_attribute ("sound", 
+											   attribute_names,
+											   attribute_values);
+		const gchar *path = g_build_filename (parser->dirname,
+											  basename, NULL);
+		parser->theme->background_sound_file = path;
 	}
 }
 

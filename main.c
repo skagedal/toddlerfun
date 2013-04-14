@@ -10,6 +10,7 @@
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
 #include <librsvg/rsvg.h>
+#include <gst/gst.h>
 #include "theme.h"
 
 /* FIXME: this should be done the proper way */
@@ -46,6 +47,57 @@ typedef struct {
 } Gamine;
 
 typedef void (*GamineDrawFunc) (Gamine *gamine, cairo_t *cr);
+
+typedef struct {
+    GstElement *elt;
+    gboolean repeat;
+} GamineSound;
+
+static void
+eos_message_received (GstBus *bus, GstMessage *message, GamineSound *sound)
+{
+    if (sound->repeat == TRUE) {
+        gst_element_set_state (GST_ELEMENT(sound->elt), GST_STATE_NULL);
+        gst_element_set_state (GST_ELEMENT(sound->elt), GST_STATE_PLAYING);
+    } else {
+        gst_element_set_state (GST_ELEMENT(sound->elt), GST_STATE_NULL);
+        gst_object_unref (GST_OBJECT(sound->elt));
+        sound->elt = NULL;
+    }
+}
+
+static void
+play_sound (gchar *filesnd, gboolean repeat)
+{
+    gchar *filename, *cwd;
+    GstElement *pipeline;
+	GstBus *bus;
+
+    pipeline = gst_element_factory_make("playbin", "playbin");
+    if (pipeline != NULL) {
+        GamineSound *closure = g_new (GamineSound, 1);
+        closure->elt = pipeline;
+        closure->repeat = repeat;
+        bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+        gst_bus_add_signal_watch_full (bus, G_PRIORITY_HIGH);
+        g_signal_connect (bus, "message::eos", 
+            (GCallback) eos_message_received, closure);
+        gst_object_unref (bus);
+
+        if (!g_file_test (filesnd, G_FILE_TEST_EXISTS))
+            fprintf(stderr, gettext("** error: %s does not exist\n"), filesnd);
+        else {
+			cwd = g_get_current_dir ();
+			filesnd = g_build_filename(cwd, filesnd, NULL);
+            filename = g_strdup_printf("file://%s", filesnd);
+            g_object_set (G_OBJECT(pipeline), "uri", filename, NULL);
+            gst_element_set_state (GST_ELEMENT(pipeline), GST_STATE_PLAYING);
+			g_free (filename);
+			g_free (filesnd);
+			g_free (cwd);
+        }
+    }
+}
 
 static double
 min_doubles (double *arr, int n)
@@ -349,6 +401,7 @@ on_button_press (GtkWidget *widget,
 				 GdkEventButton *event,
 				 Gamine *gamine)
 {
+	GamineThemeObject *obj;
 	gint num_objects;
 	cairo_t *cr = cairo_create (gamine->surface);
 
@@ -360,7 +413,9 @@ on_button_press (GtkWidget *widget,
 	gamine->image_rotation = g_random_double_range (gamine_min_rotation,
 													gamine_max_rotation);
 
-//	draw_image (gamine, cr);
+	obj = theme_get_object (gamine->theme, gamine->object_num);
+	play_sound (obj->sound_file, FALSE);
+
 	draw_effect (gamine, cr, &draw_image);
 	
 	cairo_destroy(cr);
@@ -578,8 +633,12 @@ main (int argc, char *argv[])
     }
 
 	gtk_init (&argc, &argv);
+	gst_init (&argc, &argv);
 
 	load_theme (gamine);
+
+	if (gamine->theme->background_sound_file)
+		play_sound (gamine->theme->background_sound_file, TRUE);
 
 	window = create_window (gamine, !no_fullscreen);
 	gtk_widget_show_all (window);

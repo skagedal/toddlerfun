@@ -14,6 +14,8 @@ AM_PATH_GTK_3_0([3.0.0],,AC_MSG_ERROR([Gtk+ 3.0.0 or higher required.]))
 
 PKG_CHECK_MODULES([RSVG], [librsvg-2.0],,AC_MSG_ERROR([librsvg 2.0 required.]))
 
+PKG_CHECK_MODULES([GST], [gstreamer-0.10],,AC_MSG_ERROR([gstreamer 0.10 required.]))
+
 dnl Define myprefix depending on wether our user gives us one or not
 if test "x${prefix}" = "xNONE"; then
   myprefix=${ac_default_prefix}
