@@ -4,5 +4,7 @@
     <object sound="cat.ogg" image="cat.svg" />
     <object sound="sheep.ogg" image="sheep.svg" />
     <object sound="baby.ogg" image="baby.svg" />
+    <object sound="owl.ogg" image="owl.svg" />
+    <object sound="carrot.ogg" image="carrot.svg" />
   </objects>
 </toddler_theme>

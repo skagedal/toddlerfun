@@ -3,12 +3,23 @@ IMAGES
 
 cat.svg:
 - URL: http://openclipart.org/detail/170479/cute-cat.-gatito-by-ehecatl1138-170479
+- License: CC0
 
 baby.svg:
 - URL: http://openclipart.org/detail/174716/cute-baby-by-qubodup-174716
+- License: CC0
 
 sheep.svg:
 - URL: http://openclipart.org/detail/1744/sheep-by-thestructorr
+- License: CC0
+
+carrot.svg:
+- URL: http://openclipart.org/detail/174019/cartoon-carrot--by-bogdanco-174019
+- License: CC0
+
+owl.svg:
+- URL: http://openclipart.org/detail/28075/owl-by-felipex
+- License: CC0
 
 SOUNDS
 ======
@@ -26,3 +37,14 @@ sheep.ogg:
 - URL: http://www.freesound.org/people/confusion_music/sounds/103440/
 - License: CC-BY-3.0
 - Author: confusion_music
+
+carrot.ogg:
+- URL: http://www.freesound.org/people/iamshort/sounds/181271/
+- License: CC0
+- Author: iamshort
+
+owl.ogg:
+- URL: http://www.freesound.org/people/Johnc/sounds/20684/
+- License: CC-Sampling
+- Author: Johnc
+
