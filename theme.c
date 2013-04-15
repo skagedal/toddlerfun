@@ -9,6 +9,7 @@
 #include <config.h>
 #include <string.h>
 #include <glib.h>
+#include <glib/gi18n.h>
 #include <librsvg/rsvg.h>
 #include "theme.h"
 
@@ -40,7 +41,6 @@ static void parser_start_element (GMarkupParseContext *context,
 								  GError             **error)
 {
 	GamineThemeParser *parser = (GamineThemeParser *) user_data;
-	fprintf (stderr, "start element: %s\n", element_name);
 
 	if (strcmp (element_name, "objects") == 0) {
 		guint size = sizeof (GamineThemeObject);
@@ -93,7 +93,7 @@ static void parser_error (GMarkupParseContext *context,
                           GError              *error,
                           gpointer             user_data)
 {
-	fprintf (stderr, "error");
+	g_printerr (_("Theme parser error\n"));
 }
 
 static GMarkupParser parser = {
@@ -122,8 +122,8 @@ theme_read (GamineTheme *theme, gchar *filename)
 	parseinfo.dirname = g_path_get_dirname (filename);
 
 	if (!g_file_get_contents (filename, &xml, &length, &error)) {
-		fprintf (stderr, "Can't load theme file %s: %s\n",
-				 filename, error->message);
+		g_printerr (_("Can't load theme file %s: %s\n"),
+					filename, error->message);
 		g_clear_error(&error);
 		return;
 	}
@@ -131,15 +131,15 @@ theme_read (GamineTheme *theme, gchar *filename)
 	context = g_markup_parse_context_new (&parser, 0, &parseinfo,  NULL);
 	
 	if (!g_markup_parse_context_parse (context, xml, length, &error)) {
-		fprintf (stderr, "Parse error on theme file %s: %s\n",
-				 filename, error->message);
+		g_printerr (_("Parse error on theme file %s: %s\n"),
+					filename, error->message);
 		g_clear_error (&error);
 		goto theme_read_cleanup;
 	} 
 
 	if (!g_markup_parse_context_end_parse (context, &error)) {
-		fprintf (stderr, "Parse error on theme file %s: %s\n",
-				 filename, error->message);
+		g_printerr (_("Parse error on theme file %s: %s\n"),
+					filename, error->message);
 		g_clear_error (&error);
 		goto theme_read_cleanup;
 	}

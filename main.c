@@ -10,6 +10,7 @@
 #include <glib/gi18n.h>
 #include <gtk/gtk.h>
 #include <librsvg/rsvg.h>
+#include <pango/pangocairo.h>
 #include <gst/gst.h>
 #include "theme.h"
 
@@ -36,6 +37,13 @@ typedef struct {
 	gint effect_num;
 	gdouble traveled_distance;
 
+	// Messages
+	gint message_num;
+	gboolean has_message;
+	cairo_surface_t *message_surface;
+	gdouble message_alpha;
+
+	gboolean play_sound_fx;
 	GamineTheme *theme;
 
 	// These are active during a draw
@@ -44,6 +52,7 @@ typedef struct {
 	gint y;
 	gint object_num;
 	gdouble image_rotation;
+	gchar *str;
 } Gamine;
 
 typedef void (*GamineDrawFunc) (Gamine *gamine, cairo_t *cr);
@@ -52,6 +61,18 @@ typedef struct {
     GstElement *elt;
     gboolean repeat;
 } GamineSound;
+
+gchar *gamine_messages [] = {
+	N_("Welcome to Toddler Fun! Move the mouse around to draw. Press Escape to exit."),
+	N_("Press mouse buttons to add funny images. Press keys on the keyboard to add letters."),
+	N_("Press PrintScn to save the current image to a file."),
+	N_("Use the mouse scroll wheel or key up/down to change mirror effect."),
+	N_("Press space to clear drawing.")
+};
+
+//
+// Sound
+//
 
 static void
 eos_message_received (GstBus *bus, GstMessage *message, GamineSound *sound)
@@ -85,7 +106,7 @@ play_sound (gchar *filesnd, gboolean repeat)
         gst_object_unref (bus);
 
         if (!g_file_test (filesnd, G_FILE_TEST_EXISTS))
-            fprintf(stderr, gettext("** error: %s does not exist\n"), filesnd);
+            g_printerr(_("Sound file '%s' does not exist\n"), filesnd);
         else {
 			cwd = g_get_current_dir ();
 			filesnd = g_build_filename(cwd, filesnd, NULL);
@@ -98,6 +119,10 @@ play_sound (gchar *filesnd, gboolean repeat)
         }
     }
 }
+
+//
+// Region handling
+//
 
 static double
 min_doubles (double *arr, int n)
@@ -177,7 +202,6 @@ draw_line(Gamine *gamine, cairo_t *cr)
 	cairo_stroke (cr);
 }
 
-
 static void
 draw_image(Gamine *gamine, cairo_t *cr)
 {
@@ -211,6 +235,12 @@ draw_image(Gamine *gamine, cairo_t *cr)
 								  dimension.width, dimension.height);
 
 	cairo_restore (cr);
+}
+
+static void
+draw_string (Gamine *gamine, cairo_t *cr)
+{
+// FIXME
 }
 
 static void 
@@ -273,6 +303,40 @@ surface_brighten (Gamine *gamine)
 	cairo_destroy(cr);
 }
 
+static void
+render_message (Gamine *gamine) 
+{
+	cairo_t *cr;
+	PangoLayout *layout;
+	PangoFontDescription *desc;
+	gint width, height;
+
+	if (gamine->message_surface == NULL) {
+		gamine->message_surface = 
+			cairo_image_surface_create (CAIRO_FORMAT_ARGB32,
+										2000, 40);
+	}
+
+	cr = cairo_create (gamine->message_surface);
+	layout = pango_cairo_create_layout (cr);
+	pango_layout_set_text (layout, gamine_messages[gamine->message_num], -1);
+	desc = pango_font_description_from_string ("Sans 20px");
+	pango_layout_set_font_description (layout, desc);
+	pango_font_description_free (desc);
+	cairo_translate (cr, 10, 10);
+	pango_cairo_update_layout (cr, layout);
+	pango_layout_get_pixel_size (layout, &width, &height);
+	cairo_set_source_rgb (cr, 1, 1, 1);
+	cairo_rectangle (cr, 0, 0, width + 10, height + 10);
+	cairo_fill (cr);
+	cairo_set_source_rgb (cr, 0, 0, 0);
+	cairo_move_to (cr, 5, 5);
+	pango_cairo_show_layout (cr, layout);
+	
+	cairo_destroy (cr);
+	g_object_unref (layout);
+}
+
 static gboolean 
 on_configure(GtkWidget *widget,
              GdkEventConfigure *event, 
@@ -323,7 +387,7 @@ on_draw(GtkWidget *window,
         gpointer user_data)
 {
 	Gamine *gamine;
-	double width, height;
+	gint height;
 
 	gamine = (Gamine *) user_data;
 
@@ -333,10 +397,13 @@ on_draw(GtkWidget *window,
 	cairo_set_source_surface (cr, gamine->surface, 0, 0);
 	cairo_paint (cr);
 
-	cairo_set_source_rgba(cr, 0, 1, 0, 0.1);
-	cairo_rectangle(cr, 5, 5, 50, 50);
-	cairo_fill(cr);
-	
+	if (gamine->has_message) {
+		height = cairo_image_surface_get_height (gamine->surface);
+		cairo_set_source_surface (cr, gamine->message_surface,
+								  10, height - 50);
+		cairo_paint_with_alpha (cr, gamine->message_alpha);
+	}
+
 	return FALSE;
 }
 
@@ -427,6 +494,27 @@ on_button_press (GtkWidget *widget,
 	return TRUE;
 }
 
+static void
+print_string (gchar *s, Gamine *gamine)
+{
+	cairo_t *cr = cairo_create (gamine->surface);
+	GdkDeviceManager *device_manager;
+	GdkDevice *pointer;
+
+	gamine->region = cairo_region_create ();
+
+	gamine->x = gamine->previous_x;
+	gamine->y = gamine->previous_y;
+
+	draw_effect (gamine, cr, &draw_string);
+	
+	cairo_destroy (cr);
+
+	gtk_widget_queue_draw_region (gamine->darea, gamine->region);
+	cairo_region_destroy (gamine->region);
+	gamine->region = NULL;
+}
+
 static gboolean
 on_brighten_timeout(gpointer user_data)
 {
@@ -491,13 +579,14 @@ on_key_press(GtkWidget *widget,
 			 GdkEventKey *event,
 			 Gamine *gamine)
 {
+	gunichar c;
 	if (event->type == GDK_KEY_PRESS) {
 		switch (event->keyval) {
 		case GDK_KEY_space:
 			brighten_quickly (gamine);
 			return TRUE;
 
-		case GDK_KEY_q:
+		case GDK_KEY_Escape:
 			gtk_main_quit();
 			return TRUE;
 
@@ -509,6 +598,10 @@ on_key_press(GtkWidget *widget,
 			effect_down (gamine);
             break;
 
+		default:
+			c = g_utf8_get_char_validated (event->string, -1);
+			if (c >= 0 && g_unichar_isgraph (c) && gamine->has_previous) 
+				print_string (event->string, gamine);
 		}
 	}
 
@@ -560,7 +653,7 @@ load_image (const gchar *file_name)
 
 	handle = rsvg_handle_new_from_file (file_name, &error);
 	if (error != NULL) {
-		fprintf (stderr, "Can't load %s: %s\n", file_name, error->message);
+		g_printerr (_("Can't load %s: %s\n"), file_name, error->message);
 		g_clear_error (&error);
 		return NULL;
 	}
@@ -576,11 +669,9 @@ load_theme (Gamine *gamine)
 	if (gamine->theme->parsed_ok) {
 		gint i;
 		gint len = theme_get_n_objects (gamine->theme);
-		printf ("We have %d theme objects.\n", len);
 		for (i = 0; i < len; i++) {
 			GamineThemeObject *obj = theme_get_object (gamine->theme, i);
 			if (obj->image_file != NULL) {
-				printf ("Now it's %s.\n", obj->image_file);
 				obj->image_handle = load_image (obj->image_file);
 			}
 		}
@@ -618,18 +709,21 @@ main (int argc, char *argv[])
 
 	gamine = g_new0(Gamine, 1);
 
+	gamine->play_sound_fx = !no_sound_fx;
+
 	g_set_prgname("skamine");
 	g_set_application_name(_("Toddler Fun"));
 	option_context = g_option_context_new (NULL);
 	g_option_context_set_translation_domain(option_context, GETTEXT_PACKAGE);
-	g_option_context_set_summary(option_context, "A drawing toy for toddlers.");
+	g_option_context_set_summary(option_context, 
+								 _("A drawing toy for toddlers."));
 	g_option_context_add_main_entries(option_context, options, 
                                       GETTEXT_PACKAGE);
 	g_option_context_add_group (option_context, gtk_get_option_group (TRUE));
 
 	if (!g_option_context_parse (option_context, &argc, &argv, &error)) {
-			g_print ("option parsing failed: %s\n", error->message);
-			return (1);
+		g_print (_("option parsing failed: %s\n"), error->message);
+		return (1);
     }
 
 	gtk_init (&argc, &argv);
@@ -637,8 +731,12 @@ main (int argc, char *argv[])
 
 	load_theme (gamine);
 
-	if (gamine->theme->background_sound_file)
+	if (!no_music && gamine->theme->background_sound_file)
 		play_sound (gamine->theme->background_sound_file, TRUE);
+
+	render_message (gamine);
+	gamine->message_alpha = 0.8;
+	gamine->has_message = TRUE;
 
 	window = create_window (gamine, !no_fullscreen);
 	gtk_widget_show_all (window);
