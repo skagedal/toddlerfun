@@ -42,6 +42,7 @@ typedef struct {
 	gboolean has_message;
 	cairo_surface_t *message_surface;
 	gdouble message_alpha;
+	GTimer *message_timer;
 
 	gboolean play_sound_fx;
 	GamineTheme *theme;
@@ -65,10 +66,12 @@ typedef struct {
 gchar *gamine_messages [] = {
 	N_("Welcome to Toddler Fun! Move the mouse around to draw. Press Escape to exit."),
 	N_("Press mouse buttons to add funny images. Press keys on the keyboard to add letters."),
-	N_("Press PrintScn to save the current image to a file."),
-	N_("Use the mouse scroll wheel or key up/down to change mirror effect."),
-	N_("Press space to clear drawing.")
+	N_("Press Return to save the current image to a file."),
+	N_("Use the mouse scroll wheel or the Up/Down keys to change mirror effect."),
+	N_("Press Space to clear drawing.")
 };
+
+#define NUM_MESSAGES (sizeof (gamine_messages) / sizeof (gamine_messages [0]))
 
 //
 // Sound
@@ -311,6 +314,7 @@ render_message (Gamine *gamine)
 	PangoFontDescription *desc;
 	gint width, height;
 
+	// Create surface if we haven't already
 	if (gamine->message_surface == NULL) {
 		gamine->message_surface = 
 			cairo_image_surface_create (CAIRO_FORMAT_ARGB32,
@@ -318,6 +322,13 @@ render_message (Gamine *gamine)
 	}
 
 	cr = cairo_create (gamine->message_surface);
+
+	// Clear surface
+	cairo_set_operator (cr, CAIRO_OPERATOR_CLEAR);
+	cairo_paint (cr);
+	cairo_set_operator (cr, CAIRO_OPERATOR_OVER);
+
+	// Layout text
 	layout = pango_cairo_create_layout (cr);
 	pango_layout_set_text (layout, gamine_messages[gamine->message_num], -1);
 	desc = pango_font_description_from_string ("Sans 20px");
@@ -326,15 +337,69 @@ render_message (Gamine *gamine)
 	cairo_translate (cr, 10, 10);
 	pango_cairo_update_layout (cr, layout);
 	pango_layout_get_pixel_size (layout, &width, &height);
+
+	// Draw rectangle
 	cairo_set_source_rgb (cr, 1, 1, 1);
 	cairo_rectangle (cr, 0, 0, width + 10, height + 10);
 	cairo_fill (cr);
+
+	// Draw text
 	cairo_set_source_rgb (cr, 0, 0, 0);
 	cairo_move_to (cr, 5, 5);
 	pango_cairo_show_layout (cr, layout);
 	
 	cairo_destroy (cr);
 	g_object_unref (layout);
+}
+
+static void
+update_message (Gamine *gamine)
+{
+	if (gamine->message_timer == NULL)
+		gamine->message_timer = g_timer_new ();
+	g_timer_start (gamine->message_timer);
+
+	gamine->message_num = (gamine->message_num + 1) % NUM_MESSAGES;
+
+	render_message (gamine);
+}
+
+static void
+save_picture (Gamine *gamine)
+{
+	GDateTime *datetime;
+	gchar *dirname;
+ 
+	
+    struct stat st;
+    gchar *filename;
+    gchar *pathname;
+    time_t timestamp;
+    struct tm * t;
+    cairo_surface_t *surface;
+    timestamp = time(NULL);
+    t = localtime(&timestamp);
+ 
+    dirname = g_build_filename(g_get_home_dir(), "gamine", NULL);
+    //if dirname not exists
+
+    if(!g_file_test (dirname, G_FILE_TEST_EXISTS)) {
+        if (g_mkdir(dirname, 0750) < 0)
+            g_printerr(_("Failed to create directory '%s'\n"),
+					   dirname);
+	}
+
+	datetime = g_date_time_new_now_local ();
+	filename = g_date_time_format (datetime, "%F_%R-%S.png");
+    pathname = g_build_filename(dirname, filename, NULL);
+
+    if (cairo_surface_write_to_png(gamine->surface, pathname) < 0)
+        g_printerr(_("Failed to create file '%s'\n"), pathname);
+
+    g_free (filename);
+    g_free (dirname);
+    g_free (pathname);
+	g_date_time_unref (datetime);
 }
 
 static gboolean 
@@ -516,16 +581,21 @@ print_string (gchar *s, Gamine *gamine)
 }
 
 static gboolean
-on_brighten_timeout(gpointer user_data)
+on_tick (gpointer user_data)
 {
 	Gamine *gamine = (Gamine *) user_data;
+
 	surface_brighten(gamine);
+
+	if (g_timer_elapsed (gamine->message_timer, NULL) >= 5)
+		update_message (gamine);
+
 	gtk_widget_queue_draw (gamine->darea);
 	return TRUE;
 }
 
 static gboolean
-on_brighten_quickly_timeout(gpointer user_data)
+on_brighten_quickly_timeout (gpointer user_data)
 {
 	Gamine *gamine = (Gamine *) user_data;
 	surface_brighten(gamine);
@@ -598,6 +668,10 @@ on_key_press(GtkWidget *widget,
 			effect_down (gamine);
             break;
 
+		case GDK_KEY_Return:
+			save_picture (gamine);
+			break;
+
 		default:
 			c = g_utf8_get_char_validated (event->string, -1);
 			if (c >= 0 && g_unichar_isgraph (c) && gamine->has_previous) 
@@ -621,7 +695,7 @@ create_window (Gamine *gamine, gboolean fullscreen)
 	if (fullscreen)
 		gtk_window_fullscreen (GTK_WINDOW (window));
 	else 
-		gtk_window_set_default_size (GTK_WINDOW (window), 400, 400);
+		gtk_window_set_default_size (GTK_WINDOW (window), 1000, 800);
 
 	g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
 	g_signal_connect (darea, "draw", G_CALLBACK (on_draw), gamine);
@@ -640,7 +714,8 @@ create_window (Gamine *gamine, gboolean fullscreen)
 						  GDK_BUTTON_PRESS_MASK |
 						  GDK_POINTER_MOTION_MASK |
 						  GDK_SCROLL_MASK);
-	g_timeout_add_seconds(2, on_brighten_timeout, gamine);
+
+	g_timeout_add_seconds(2, on_tick, gamine);
 		
 	return window;
 }
@@ -734,7 +809,8 @@ main (int argc, char *argv[])
 	if (!no_music && gamine->theme->background_sound_file)
 		play_sound (gamine->theme->background_sound_file, TRUE);
 
-	render_message (gamine);
+	gamine->message_num = -1;
+	update_message (gamine);
 	gamine->message_alpha = 0.8;
 	gamine->has_message = TRUE;
 
