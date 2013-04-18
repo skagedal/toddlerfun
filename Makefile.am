@@ -1,6 +1,6 @@
 ## Process this file with automake to generate a Makefile.in
 
-SUBDIRS = src po 
+SUBDIRS = src po defaulttheme
 
 ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
@@ -10,7 +10,7 @@ desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
 
 @INTLTOOL_DESKTOP_RULE@
 
-distuninstallcheck_listfiles = find . -type f -print | grep -v scrollkeeper
+# distuninstallcheck_listfiles = find . -type f -print | grep -v scrollkeeper
 
 EXTRA_DIST = \
 	autogen.sh		\

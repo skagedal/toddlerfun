@@ -1,29 +1,29 @@
-bin_PROGRAMS = skamine
+bin_PROGRAMS = toddlerfun
 
-skamine_SOURCES = \
+toddlerfun_SOURCES = \
 	main.c	\
 	theme.c	\
 	theme.h
 
-skamine_CPPFLAGS = \
+toddlerfun_CPPFLAGS = \
 	-I$(top_srcdir)					\
 	-DG_LOG_DOMAIN=\"ToddlerFun\"			\
 	-DDATADIR=\""$(pkgdatadir)"\"			\
-	-DGNOMELOCALEDIR=\""$(datadir)/locale"\"	\
+	-DPACKAGE_LOCALE_DIR=\""$(datadir)/locale"\"	\
 	$(DISABLE_DEPRECATED)				\
 	$(AM_CPPFLAGS)
 
-skamine_CFLAGS = \
+toddlerfun_CFLAGS = \
 	   $(GTK_CFLAGS)	\
 	   $(RSVG_CFLAGS)	\
 	   $(GST_CFLAGS)	\
 	   $(WARN_CFLAGS)		\
 	   $(AM_CFLAGS)
 
-skamine_LDFLAGS = \
+toddlerfun_LDFLAGS = \
 	$(AM_LDFLAGS)
 
-skamine_LDADD = \
+toddlerfun_LDADD = \
 	$(GTK_LIBS)	\
 	$(RSVG_LIBS)	\
 	$(GST_LIBS)	\

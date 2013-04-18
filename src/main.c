@@ -8,15 +8,13 @@
 #include <config.h>
 #include <math.h>
 #include <glib/gi18n.h>
+#include <glib/gstdio.h>
 #include <gtk/gtk.h>
 #include <librsvg/rsvg.h>
+#include <librsvg/rsvg-cairo.h>
 #include <pango/pangocairo.h>
 #include <gst/gst.h>
 #include "theme.h"
-
-/* FIXME: this should be done the proper way */
-#define GETTEXT_PACKAGE "skamine"
-#define PACKAGE_LOCALE_DIR "po"
 
 static const gint gamine_effect_min = 0;
 static const gint gamine_effect_max = 8;
@@ -92,7 +90,7 @@ eos_message_received (GstBus *bus, GstMessage *message, GamineSound *sound)
 static void
 play_sound (gchar *filesnd, gboolean repeat)
 {
-    gchar *filename, *cwd;
+    gchar *filename;
     GstElement *pipeline;
 	GstBus *bus;
 
@@ -110,14 +108,10 @@ play_sound (gchar *filesnd, gboolean repeat)
         if (!g_file_test (filesnd, G_FILE_TEST_EXISTS))
             g_printerr(_("Sound file '%s' does not exist\n"), filesnd);
         else {
-			cwd = g_get_current_dir ();
-			filesnd = g_build_filename(cwd, filesnd, NULL);
             filename = g_strdup_printf("file://%s", filesnd);
             g_object_set (G_OBJECT(pipeline), "uri", filename, NULL);
             gst_element_set_state (GST_ELEMENT(pipeline), GST_STATE_PLAYING);
 			g_free (filename);
-			g_free (filesnd);
-			g_free (cwd);
         }
     }
 }
@@ -368,19 +362,10 @@ save_picture (Gamine *gamine)
 {
 	GDateTime *datetime;
 	gchar *dirname;
- 
-	
-    struct stat st;
     gchar *filename;
     gchar *pathname;
-    time_t timestamp;
-    struct tm * t;
-    cairo_surface_t *surface;
-    timestamp = time(NULL);
-    t = localtime(&timestamp);
  
     dirname = g_build_filename(g_get_home_dir(), "gamine", NULL);
-    //if dirname not exists
 
     if(!g_file_test (dirname, G_FILE_TEST_EXISTS)) {
         if (g_mkdir(dirname, 0750) < 0)
@@ -562,8 +547,6 @@ static void
 print_string (gchar *s, Gamine *gamine)
 {
 	cairo_t *cr = cairo_create (gamine->surface);
-	GdkDeviceManager *device_manager;
-	GdkDevice *pointer;
 
 	gamine->region = cairo_region_create ();
 
@@ -739,7 +722,7 @@ static void
 load_theme (Gamine *gamine)
 {
 	gamine->theme = theme_new ();
-	theme_read (gamine->theme, "defaulttheme/theme.xml");
+	theme_read (gamine->theme, DATADIR "/defaulttheme/theme.xml");
 	if (gamine->theme->parsed_ok) {
 		gint i;
 		gint len = theme_get_n_objects (gamine->theme);
@@ -785,7 +768,7 @@ main (int argc, char *argv[])
 
 	gamine->play_sound_fx = !no_sound_fx;
 
-	g_set_prgname("skamine");
+	g_set_prgname("toddlerfun");
 	g_set_application_name(_("Toddler Fun"));
 	option_context = g_option_context_new (NULL);
 	g_option_context_set_translation_domain(option_context, GETTEXT_PACKAGE);
@@ -815,6 +798,8 @@ main (int argc, char *argv[])
 
 	window = create_window (gamine, !no_fullscreen);
 	gtk_widget_show_all (window);
+
+//	g_print ("Data dir: " DATADIR "\n");
 
 //	gtk_widget_set_app_paintable(gamine->darea, TRUE);
 

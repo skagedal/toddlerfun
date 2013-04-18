@@ -18,7 +18,7 @@ typedef struct {
 	gchar *dirname;
 } GamineThemeParser;
 
-static gchar *
+static const gchar *
 get_attribute (const char *name,
 			   const gchar **attribute_names,
 			   const gchar **attribute_values)
@@ -75,8 +75,8 @@ static void parser_start_element (GMarkupParseContext *context,
 		const gchar *basename = get_attribute ("sound", 
 											   attribute_names,
 											   attribute_values);
-		const gchar *path = g_build_filename (parser->dirname,
-											  basename, NULL);
+		gchar *path = g_build_filename (parser->dirname,
+										basename, NULL);
 		parser->theme->background_sound_file = path;
 	}
 }

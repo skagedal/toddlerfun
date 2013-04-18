@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([Toddler Fun], [0.1], [simon@helgo.net])
+AC_INIT([toddlerfun], [0.1], [simon@helgo.net])
 
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])
@@ -12,6 +12,8 @@ m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 # Check for programs
 AC_PROG_CC
+
+AM_PROG_CC_C_O
 
 # Initialize libtool
 LT_PREREQ([2.2.6])
@@ -44,7 +46,7 @@ IT_PROG_INTLTOOL([0.40.0])
 AM_GNU_GETTEXT_VERSION([0.17])
 AM_GNU_GETTEXT([external])
 
-AC_SUBST([GETTEXT_PACKAGE], [gnome-hello])
+AC_SUBST([GETTEXT_PACKAGE], [toddlerfun])
 AC_DEFINE([GETTEXT_PACKAGE], [PACKAGE_TARNAME], [Define to the gettext package name.])
 
 AC_SUBST([AM_CPPFLAGS])
