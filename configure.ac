@@ -1,38 +1,62 @@
-AC_PREREQ(2.60)
-AC_INIT([skamine], [0.1], [simon@helgo.net])
-AC_CONFIG_AUX_DIR([build-aux])
-AM_INIT_AUTOMAKE([1.9.6 -Wall -Werror dist-bzip2])
+AC_PREREQ(2.61)
+AC_INIT([Toddler Fun], [0.1], [simon@helgo.net])
+
+AC_CONFIG_SRCDIR([src])
+AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_AUX_DIR([build-aux])
 
+AM_INIT_AUTOMAKE([1.10 foreign -Wall -Werror dist-bzip2  no-dist-gzip])
+
+m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
+
+# Check for programs
 AC_PROG_CC
-# Compiling sources with per-target flags requires AM_PROG_CC_C_O
-AM_PROG_CC_C_O
-AC_PROG_INSTALL
-AC_PROG_LIBTOOL
 
-AM_PATH_GTK_3_0([3.0.0],,AC_MSG_ERROR([Gtk+ 3.0.0 or higher required.]))
+# Initialize libtool
+LT_PREREQ([2.2.6])
+LT_INIT
+
+# *****
+# GNOME
+# *****
+
+GNOME_DEBUG_CHECK
+GNOME_COMPILE_WARNINGS([maximum])
+
+# ***************************
+# Check for required packages
+# ***************************
+
+LIBGTK_REQUIRED=3.0.0
+
+PKG_CHECK_MODULES([GTK], [gtk+-3.0 >= $LIBGTK_REQUIRED])
 
 PKG_CHECK_MODULES([RSVG], [librsvg-2.0],,AC_MSG_ERROR([librsvg 2.0 required.]))
-
 PKG_CHECK_MODULES([GST], [gstreamer-0.10],,AC_MSG_ERROR([gstreamer 0.10 required.]))
 
-dnl Define myprefix depending on wether our user gives us one or not
-if test "x${prefix}" = "xNONE"; then
-  myprefix=${ac_default_prefix}
-else
-  myprefix=${prefix}
-fi
+# ********************
+# Internationalisation
+# ********************
 
-#DATADIRNAME="share"
-#PACKAGE_DATA_DIR="data"
-#AC_SUBST(PACKAGE_DATA_DIR)
-AC_DEFINE_UNQUOTED(PACKAGE_DATA_DIR, "${myprefix}/share/toddlerfun", [Toddler Fun data directory])
+IT_PROG_INTLTOOL([0.40.0])
 
-# AM_GNU_GETTEXT
+AM_GNU_GETTEXT_VERSION([0.17])
+AM_GNU_GETTEXT([external])
 
-AC_CONFIG_HEADERS([config.h])
+AC_SUBST([GETTEXT_PACKAGE], [gnome-hello])
+AC_DEFINE([GETTEXT_PACKAGE], [PACKAGE_TARNAME], [Define to the gettext package name.])
+
+AC_SUBST([AM_CPPFLAGS])
+AC_SUBST([AM_CFLAGS])
+AC_SUBST([AM_CXXFLAGS])
+AC_SUBST([AM_LDFLAGS])
+
 AC_CONFIG_FILES([
-        Makefile
-	po/Makefile
+Makefile
+src/Makefile
+po/Makefile.in
+defaulttheme/Makefile
 ])
+
 AC_OUTPUT

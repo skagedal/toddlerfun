@@ -1,0 +1,9 @@
+[Desktop Entry]
+_Name=Toddler Fun
+_Comment=A toy app for the smallest children
+Exec=skamine
+Icon=
+Terminal=false
+Type=Application
+# X-GNOME-DocPath=gnome-hello/gnome-hello.xml
+Categories=Games

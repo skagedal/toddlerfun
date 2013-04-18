@@ -15,7 +15,6 @@
 #include "theme.h"
 
 /* FIXME: this should be done the proper way */
-#define ENABLE_NLS
 #define GETTEXT_PACKAGE "skamine"
 #define PACKAGE_LOCALE_DIR "po"
 
