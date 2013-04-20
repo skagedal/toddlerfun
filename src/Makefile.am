@@ -29,4 +29,3 @@ toddlerfun_LDADD = \
 	$(GST_LIBS)	\
 	$(INTLLIBS)
 
--include $(top_srcdir)/git.mk

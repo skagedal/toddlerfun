@@ -19,4 +19,3 @@ theme_DATA = $(THEME_FILES)
 EXTRA_DIST = \
 	$(THEME_FILES)
 
--include $(top_srcdir)/git.mk

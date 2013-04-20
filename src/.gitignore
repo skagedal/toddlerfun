@@ -18,6 +18,4 @@
 /_libs
 /so_locations
 /tags
-
-# Don't want to check this in; intend to replace it
-bach.ogg
+/toddlerfun

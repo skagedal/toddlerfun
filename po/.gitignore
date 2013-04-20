@@ -1,0 +1,16 @@
+*.gmo
+*.mo
+.intltool-merge-cache
+Makefile
+Makefile.in
+Makefile.in.in
+POTFILES
+stamp-it
+toddlerfun.pot
+Rules-quot
+boldquot.sed
+en@boldquot.header
+en@quot.header
+insert-header.sin
+quot.sed
+remove-potcdate.sin
