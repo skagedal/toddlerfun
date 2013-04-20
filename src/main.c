@@ -679,6 +679,8 @@ on_key_press(GtkWidget *widget,
 			break;
 
 		default:
+			// This check if the string is printable might not be
+			// necessary. Well, here it is. 
 			c = g_utf8_get_char_validated (event->string, -1);
 			if (c >= 0 && g_unichar_isgraph (c) && gamine->has_previous) 
 				print_string (event->string, gamine);
@@ -822,10 +824,6 @@ main (int argc, char *argv[])
 
 	window = create_window (gamine, !no_fullscreen);
 	gtk_widget_show_all (window);
-
-//	g_print ("Data dir: " DATADIR "\n");
-
-//	gtk_widget_set_app_paintable(gamine->darea, TRUE);
 
 	gtk_main ();
 

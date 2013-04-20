@@ -1,0 +1,38 @@
+Toddler Fun 0.1
+===============
+
+This is based on Emmanuel GARETTE's program Gamine 1.1, but most of
+the code is rewritten. These are the changes relative to Gamine:
+
+* Line color is cycled through the colors of the rainbow instead of
+  randombly chosen.
+
+* On button press, a random cute SVG image is drawn.  A matching sound
+  is played.
+
+* Drawing content is slowly faded away.
+
+* When clearing window, it fades away quickly.
+
+* Kaleidoscopic mode: add mirrors with scroll wheel or key Up/Down
+
+* GTK+ 3 is used.
+
+* Drawing to an offscreen surface; this means messages can be
+  displayed above drawing and when image is saved, only image is
+  saved.
+
+* GNU Autotools are used. 
+
+* Commandline options allow setting of no fullscreen mode, turning off
+  background music and sound effects.
+
+* SVG images and sounds are bundled together in a "theme": a future
+  version might allow user to choose between different themes.
+
+* GConf configuration no longer available - future version should have
+  a "parental console" where settings can be made. 
+
+* Simpler code is used to go to fullscreen mode - this might lose
+  functionality (unsure what?), but I've experienced some strange X
+  errors upon exiting gamine previously.
