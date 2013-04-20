@@ -50,7 +50,7 @@ typedef struct {
 	gint y;
 	gint object_num;
 	gdouble image_rotation;
-	gchar *str;
+	PangoLayout *layout;
 } Gamine;
 
 typedef void (*GamineDrawFunc) (Gamine *gamine, cairo_t *cr);
@@ -236,7 +236,19 @@ draw_image(Gamine *gamine, cairo_t *cr)
 static void
 draw_string (Gamine *gamine, cairo_t *cr)
 {
-// FIXME
+	gint width, height;
+
+	cairo_save (cr);
+	
+	pango_layout_get_pixel_size (gamine->layout, &width, &height);
+	cairo_translate (cr, gamine->x - width / 2, gamine->y - height / 2);
+	cairo_move_to (cr, 0, 0);
+	pango_cairo_update_layout (cr, gamine->layout);
+	pango_cairo_show_layout (cr, gamine->layout);
+
+	add_user_rectangle_to_region (gamine, cr, 0, 0, width, height);
+	
+	cairo_restore (cr);
 }
 
 static void 
@@ -524,7 +536,10 @@ on_button_press (GtkWidget *widget,
 	gamine->region = cairo_region_create ();
 	gamine->x = event->x;
 	gamine->y = event->y;
-	num_objects = gamine->theme->theme_objects->len;
+	num_objects = theme_get_n_objects (gamine->theme);
+	if (num_objects < 1)
+		return TRUE;
+
 	gamine->object_num = g_random_int_range (0, num_objects);
 	gamine->image_rotation = g_random_double_range (gamine_min_rotation,
 													gamine_max_rotation);
@@ -546,18 +561,27 @@ on_button_press (GtkWidget *widget,
 static void
 print_string (gchar *s, Gamine *gamine)
 {
+	PangoFontDescription *desc;
 	cairo_t *cr = cairo_create (gamine->surface);
 
 	gamine->region = cairo_region_create ();
 
 	gamine->x = gamine->previous_x;
 	gamine->y = gamine->previous_y;
+	gamine->layout = pango_cairo_create_layout (cr);
+	pango_layout_set_text (gamine->layout, s, -1);
+	desc = pango_font_description_from_string ("Sans Bold 40px");
+	pango_layout_set_font_description (gamine->layout, desc);
+	pango_font_description_free (desc);
+	cairo_set_source_rgb (cr, 0, 0, 0);
 
 	draw_effect (gamine, cr, &draw_string);
 	
 	cairo_destroy (cr);
 
 	gtk_widget_queue_draw_region (gamine->darea, gamine->region);
+
+	g_object_unref (gamine->layout);
 	cairo_region_destroy (gamine->region);
 	gamine->region = NULL;
 }

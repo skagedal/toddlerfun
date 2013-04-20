@@ -116,14 +116,13 @@ theme_read (GamineTheme *theme, gchar *filename)
 	GMarkupParseContext *context;
 	gchar *xml;
 	gsize length;
-	GError *error;
+	GError *error = NULL;
 
 	parseinfo.theme = theme;
 	parseinfo.dirname = g_path_get_dirname (filename);
 
 	if (!g_file_get_contents (filename, &xml, &length, &error)) {
-		g_printerr (_("Can't load theme file %s: %s\n"),
-					filename, error->message);
+		g_printerr ("%s\n", error->message);
 		g_clear_error(&error);
 		return;
 	}
@@ -154,12 +153,17 @@ theme_read_cleanup:
 GamineThemeObject *
 theme_get_object (GamineTheme *theme, gint i)
 {
-	GArray *arr = theme->theme_objects;
-	return &g_array_index (arr, GamineThemeObject, i);
+	if (theme->theme_objects != NULL) {
+		GArray *arr = theme->theme_objects;
+		return &g_array_index (arr, GamineThemeObject, i);
+	}
+	return NULL;
 }
 
 gint
 theme_get_n_objects (GamineTheme *theme)
 {
-	return theme->theme_objects->len;
+	if (theme->theme_objects != NULL)
+		return theme->theme_objects->len;
+	return 0;
 }
