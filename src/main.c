@@ -386,7 +386,7 @@ save_picture (Gamine *gamine)
 	}
 
 	datetime = g_date_time_new_now_local ();
-	filename = g_date_time_format (datetime, "%F_%R-%S.png");
+	filename = g_date_time_format (datetime, "%F_%H.%M.%S.png");
     pathname = g_build_filename(dirname, filename, NULL);
 
     if (cairo_surface_write_to_png(gamine->surface, pathname) < 0)
@@ -529,7 +529,6 @@ on_button_press (GtkWidget *widget,
 				 GdkEventButton *event,
 				 Gamine *gamine)
 {
-	GamineThemeObject *obj;
 	gint num_objects;
 	cairo_t *cr = cairo_create (gamine->surface);
 
@@ -544,8 +543,11 @@ on_button_press (GtkWidget *widget,
 	gamine->image_rotation = g_random_double_range (gamine_min_rotation,
 													gamine_max_rotation);
 
-	obj = theme_get_object (gamine->theme, gamine->object_num);
-	play_sound (obj->sound_file, FALSE);
+	if (gamine->play_sound_fx) {
+		GamineThemeObject *obj;
+		obj = theme_get_object (gamine->theme, gamine->object_num);
+		play_sound (obj->sound_file, FALSE);
+	}
 
 	draw_effect (gamine, cr, &draw_image);
 	
@@ -792,8 +794,6 @@ main (int argc, char *argv[])
 
 	gamine = g_new0(Gamine, 1);
 
-	gamine->play_sound_fx = !no_sound_fx;
-
 	g_set_prgname("toddlerfun");
 	g_set_application_name(_("Toddler Fun"));
 	option_context = g_option_context_new (NULL);
@@ -816,6 +816,8 @@ main (int argc, char *argv[])
 
 	if (!no_music && gamine->theme->background_sound_file)
 		play_sound (gamine->theme->background_sound_file, TRUE);
+
+	gamine->play_sound_fx = !no_sound_fx;
 
 	gamine->message_num = -1;
 	update_message (gamine);
