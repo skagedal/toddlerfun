@@ -23,8 +23,6 @@ DISTCLEANFILES =
 
 MAINTAINERCLEANFILES = \
 	ChangeLog \
-	$(srcdir)/build-aux
-	$(srcdir)/m4
 	$(srcdir)/INSTALL \
 	$(srcdir)/aclocal.m4 \
 	$(srcdir)/autoscan.log \
@@ -42,14 +40,6 @@ MAINTAINERCLEANFILES = \
 	$(srcdir)/omf.make \
 	$(srcdir)/xmldocs.make \
 	$(srcdir)/gtk-doc.make \
-	$(srcdir)/po/Makefile.in.in \
-	$(srcdir)/po/Rules-quot \
-	$(srcdir)/po/boldquot.sed \
-	$(srcdir)/po/en@boldquot.header \
-	$(srcdir)/po/en@quot.header \
-	$(srcdir)/po/insert-header.sin \
-	$(srcdir)/po/quot.sed \
-	$(srcdir)/po/remove-potcdate.sin
 	`find "$(srcdir)" -type f -name Makefile.in -print` \
 	$(NULL)
 

@@ -4,6 +4,7 @@
 Makefile
 Makefile.in
 Makefile.in.in
+Makevars.template
 POTFILES
 stamp-it
 toddlerfun.pot

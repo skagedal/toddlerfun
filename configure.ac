@@ -1,5 +1,5 @@
 AC_PREREQ(2.61)
-AC_INIT([toddlerfun], [0.1], [simon@helgo.net])
+AC_INIT([toddlerfun], [0.1.0], [simon@helgo.net])
 
 AC_CONFIG_SRCDIR([src])
 AC_CONFIG_HEADERS([config.h])

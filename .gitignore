@@ -43,3 +43,4 @@ config.h.in
 m4
 omf.make
 xmldocs.make
+*.tar.bz2
