@@ -763,6 +763,17 @@ load_theme (Gamine *gamine)
 	}
 }
 
+#ifdef ENABLE_NLS
+static void
+translate_messages (void) 
+{
+	gint i;
+	for (i = 0; i < NUM_MESSAGES; i++) {
+		gamine_messages[i] = gettext (gamine_messages[i]);
+	}
+}
+#endif
+
 int
 main (int argc, char *argv[])
 {
@@ -790,6 +801,8 @@ main (int argc, char *argv[])
 	bindtextdomain (GETTEXT_PACKAGE, PACKAGE_LOCALE_DIR);
 	bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
 	textdomain (GETTEXT_PACKAGE);
+
+	translate_messages ();
 #endif
 
 	gamine = g_new0(Gamine, 1);
@@ -814,7 +827,7 @@ main (int argc, char *argv[])
 
 	load_theme (gamine);
 
-	if (!no_music && gamine->theme->background_sound_file)
+	if (!no_music && gamine->theme->background_sound_file != NULL)
 		play_sound (gamine->theme->background_sound_file, TRUE);
 
 	gamine->play_sound_fx = !no_sound_fx;
