@@ -681,11 +681,14 @@ on_key_press(GtkWidget *widget,
 			break;
 
 		default:
-			// This check if the string is printable might not be
-			// necessary. Well, here it is. 
-			c = g_utf8_get_char_validated (event->string, -1);
-			if (c >= 0 && g_unichar_isgraph (c) && gamine->has_previous) 
-				print_string (event->string, gamine);
+			c = gdk_keyval_to_unicode (event->keyval);
+			if (c >= 0 && g_unichar_isgraph (c) && gamine->has_previous) {
+				gchar outbuf[7];
+				gint bytes_written;
+				bytes_written = g_unichar_to_utf8 (c, outbuf);
+				outbuf[bytes_written] = '\0';
+				print_string (outbuf, gamine);
+			}	
 		}
 	}
 
