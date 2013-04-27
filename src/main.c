@@ -34,15 +34,21 @@ typedef struct {
 	gint effect_num;
 	gdouble traveled_distance;
 
+	gboolean play_sound_fx;
+	GamineTheme *theme;
+
 	// Messages
 	gint message_num;
 	gboolean has_message;
 	cairo_surface_t *message_surface;
 	gdouble message_alpha;
 	GTimer *message_timer;
-
-	gboolean play_sound_fx;
-	GamineTheme *theme;
+	
+	// Letters
+	guint last_keyval;
+	gint letter_x;
+	gint letter_y;
+	gdouble letter_hue;
 
 	// These are active during a draw
 	cairo_region_t *region;
@@ -241,7 +247,8 @@ draw_string (Gamine *gamine, cairo_t *cr)
 	cairo_save (cr);
 	
 	pango_layout_get_pixel_size (gamine->layout, &width, &height);
-	cairo_translate (cr, gamine->x - width / 2, gamine->y - height / 2);
+	cairo_translate (cr, gamine->letter_x - width / 2, 
+					 gamine->letter_y - height / 2);
 	cairo_move_to (cr, 0, 0);
 	pango_cairo_update_layout (cr, gamine->layout);
 	pango_cairo_show_layout (cr, gamine->layout);
@@ -563,19 +570,20 @@ on_button_press (GtkWidget *widget,
 static void
 print_string (gchar *s, Gamine *gamine)
 {
+	gdouble r, g, b;
 	PangoFontDescription *desc;
 	cairo_t *cr = cairo_create (gamine->surface);
 
 	gamine->region = cairo_region_create ();
 
-	gamine->x = gamine->previous_x;
-	gamine->y = gamine->previous_y;
 	gamine->layout = pango_cairo_create_layout (cr);
 	pango_layout_set_text (gamine->layout, s, -1);
-	desc = pango_font_description_from_string ("Sans Bold 40px");
+	desc = pango_font_description_from_string ("Sans Bold 60px");
 	pango_layout_set_font_description (gamine->layout, desc);
 	pango_font_description_free (desc);
-	cairo_set_source_rgb (cr, 0, 0, 0);
+
+	gtk_hsv_to_rgb (gamine->letter_hue, 1.0, 0.8, &r, &g, &b);
+	cairo_set_source_rgb (cr, r, g, b);
 
 	draw_effect (gamine, cr, &draw_string);
 	
@@ -658,39 +666,63 @@ on_key_press(GtkWidget *widget,
 			 Gamine *gamine)
 {
 	gunichar c;
-	if (event->type == GDK_KEY_PRESS) {
-		switch (event->keyval) {
-		case GDK_KEY_space:
-			brighten_quickly (gamine);
-			return TRUE;
+	gboolean is_key_repeat;
 
-		case GDK_KEY_Escape:
-			gtk_main_quit();
-			return TRUE;
+	is_key_repeat = event->keyval == gamine->last_keyval;
+	gamine->last_keyval = event->keyval;
 
-		case GDK_KEY_Up:
-			effect_up (gamine);
-            break;
+	switch (event->keyval) {
+	case GDK_KEY_space:
+		brighten_quickly (gamine);
+		return TRUE;
 
-		case GDK_KEY_Down:
-			effect_down (gamine);
-            break;
+	case GDK_KEY_Escape:
+		gtk_main_quit();
+		return TRUE;
 
-		case GDK_KEY_Return:
-			save_picture (gamine);
-			break;
+	case GDK_KEY_Up:
+		effect_up (gamine);
+        break;
 
-		default:
-			c = gdk_keyval_to_unicode (event->keyval);
-			if (c >= 0 && g_unichar_isgraph (c) && gamine->has_previous) {
-				gchar outbuf[7];
-				gint bytes_written;
-				bytes_written = g_unichar_to_utf8 (c, outbuf);
-				outbuf[bytes_written] = '\0';
-				print_string (outbuf, gamine);
-			}	
-		}
+	case GDK_KEY_Down:
+		effect_down (gamine);
+        break;
+
+	case GDK_KEY_Return:
+		save_picture (gamine);
+		break;
+
+	default:
+		c = gdk_keyval_to_unicode (event->keyval);
+		if (c >= 0 && g_unichar_isgraph (c) && gamine->has_previous) {
+			gchar outbuf[7];
+			gint bytes_written;
+			bytes_written = g_unichar_to_utf8 (c, outbuf);
+			outbuf[bytes_written] = '\0';
+
+			if (is_key_repeat) {
+				gamine->letter_hue += 0.01;
+				if (gamine->letter_hue >= 1.0) 
+					gamine->letter_hue -= 1.0;
+			} else {
+				gamine->letter_x = gamine->previous_x;
+				gamine->letter_y = gamine->previous_y;
+				gamine->letter_hue = g_random_double ();
+			}
+
+			print_string (outbuf, gamine);
+		}	
 	}
+
+	return FALSE;
+}
+
+static gboolean
+on_key_release(GtkWidget *widget,
+			   GdkEventKey *event,
+			   Gamine *gamine)
+{
+	gamine->last_keyval = GDK_KEY_VoidSymbol;
 
 	return FALSE;
 }
@@ -722,6 +754,8 @@ create_window (Gamine *gamine, gboolean fullscreen)
 					  G_CALLBACK (on_scroll), gamine);
     g_signal_connect (window, "key_press_event",
 					  G_CALLBACK (on_key_press), gamine);
+	g_signal_connect (window, "key_release_event",
+					  G_CALLBACK (on_key_release), gamine);
 	gtk_widget_set_events(darea,
 						  gtk_widget_get_events(window) | 
 						  GDK_BUTTON_PRESS_MASK |
