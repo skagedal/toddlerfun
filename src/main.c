@@ -744,17 +744,17 @@ create_window (Gamine *gamine, gboolean fullscreen)
 
 	g_signal_connect (window, "destroy", G_CALLBACK (gtk_main_quit), NULL);
 	g_signal_connect (darea, "draw", G_CALLBACK (on_draw), gamine);
-	g_signal_connect (darea, "configure_event", 
+	g_signal_connect (darea, "configure-event", 
 					  G_CALLBACK (on_configure), gamine); 
-    g_signal_connect (darea, "motion_notify_event",
+    g_signal_connect (darea, "motion-notify-event",
 					  G_CALLBACK (on_motion_notify), gamine);
-	g_signal_connect (darea, "button_press_event", 
+	g_signal_connect (darea, "button-press-event", 
 					  G_CALLBACK (on_button_press), gamine); 
-	g_signal_connect (darea, "scroll_event",
+	g_signal_connect (darea, "scroll-event",
 					  G_CALLBACK (on_scroll), gamine);
-    g_signal_connect (window, "key_press_event",
+    g_signal_connect (window, "key-press-event",
 					  G_CALLBACK (on_key_press), gamine);
-	g_signal_connect (window, "key_release_event",
+	g_signal_connect (window, "key-release-event",
 					  G_CALLBACK (on_key_release), gamine);
 	gtk_widget_set_events(darea,
 						  gtk_widget_get_events(window) | 
