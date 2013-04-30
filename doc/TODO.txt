@@ -1,0 +1,19 @@
+TODO Toddler Fun
+================
+ * Save images to a subdirectory of the standard Pictures directory
+ * When saving image, show message saying where it's saved
+ * Camera sound on image save
+ * Fade messages in and out
+ * Little twinkly stars that appear near the pointer when moving and quickly 
+   fade away.  Give a sound that pans left/right according to mouse x position,
+   pitch changes with y position (but with a random component as well)
+ * Change line width while right mouse button is pressed? 
+ * Parental console available through the operation "click in each corner,
+   clockwise":
+   * Set sound effects volume and music volume
+   * "No auto-fade" option, possibly set fade time?
+   * Set mode where screen is completely locked. GtkApplication inhibit thing?
+   * Change theme?
+ * Compose a new theme song
+ * New fun items
+
