@@ -41,10 +41,7 @@ PKG_CHECK_MODULES([GST], [gstreamer-0.10],,AC_MSG_ERROR([gstreamer 0.10 required
 # Internationalisation
 # ********************
 
-IT_PROG_INTLTOOL([0.40.0])
-
-AM_GNU_GETTEXT_VERSION([0.19])
-AM_GNU_GETTEXT([external])
+IT_PROG_INTLTOOL([0.50.0])
 
 AC_SUBST([GETTEXT_PACKAGE], [toddlerfun])
 AC_DEFINE([GETTEXT_PACKAGE], [PACKAGE_TARNAME], [Define to the gettext package name.])
