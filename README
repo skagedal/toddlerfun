@@ -7,3 +7,8 @@ things should happen when the child moves the moves or presses buttons
 on the mouse or keys on the keyboard.
 
 It began as a fork of Gamine 1.1, but all code has been rewritten.
+
+Build dependencies include:
+ - GTK+ 3.0
+ - GStreamer 0.10
+ - librsvg 2.0
