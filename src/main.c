@@ -829,7 +829,8 @@ main (int argc, char *argv[])
 		{ "no-music", 'M', 0, G_OPTION_ARG_NONE, &no_music,
 		  N_("Don't play music"), NULL },
 		{ "no-sound-fx", 'S', 0, G_OPTION_ARG_NONE, &no_sound_fx,
-		  N_("Don't play sound effects"), NULL }
+		  N_("Don't play sound effects"), NULL },
+		{ NULL }
 	};
 
 	setlocale(LC_ALL, "");
