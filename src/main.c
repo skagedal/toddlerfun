@@ -11,7 +11,6 @@
 #include <glib/gstdio.h>
 #include <gtk/gtk.h>
 #include <librsvg/rsvg.h>
-#include <librsvg/rsvg-cairo.h>
 #include <pango/pangocairo.h>
 #include <gst/gst.h>
 #include "theme.h"
