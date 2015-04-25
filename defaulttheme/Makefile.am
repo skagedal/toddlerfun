@@ -9,7 +9,7 @@ THEME_FILES = \
 	owl.svg \
 	sheep.ogg \
 	sheep.svg \
-	bach.ogg \
+	little-waltz.ogg \
 	theme.xml \
 	README
 
