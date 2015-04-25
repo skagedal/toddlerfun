@@ -4,15 +4,15 @@ typedef struct {
 	gchar *sound_file;
 	gchar *image_file;
 	RsvgHandle *image_handle;
-} GamineThemeObject;
+} ToddlerFunThemeObject;
 
 typedef struct {
 	GArray *theme_objects;
 	gchar *background_sound_file;
 	gboolean parsed_ok;
-} GamineTheme;
+} ToddlerFunTheme;
 
-GamineTheme *theme_new (void);
-void theme_read (GamineTheme *theme, gchar *filename);
-GamineThemeObject *theme_get_object (GamineTheme *theme, gint i);
-gint theme_get_n_objects (GamineTheme *theme);
+ToddlerFunTheme *theme_new (void);
+void theme_read (ToddlerFunTheme *theme, gchar *filename);
+ToddlerFunThemeObject *theme_get_object (ToddlerFunTheme *theme, gint i);
+gint theme_get_n_objects (ToddlerFunTheme *theme);

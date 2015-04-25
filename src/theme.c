@@ -14,9 +14,9 @@
 #include "theme.h"
 
 typedef struct {
-	GamineTheme *theme;
+	ToddlerFunTheme *theme;
 	gchar *dirname;
-} GamineThemeParser;
+} ToddlerFunThemeParser;
 
 static const gchar *
 get_attribute (const char *name,
@@ -40,16 +40,16 @@ static void parser_start_element (GMarkupParseContext *context,
 								  gpointer             user_data,
 								  GError             **error)
 {
-	GamineThemeParser *parser = (GamineThemeParser *) user_data;
+	ToddlerFunThemeParser *parser = (ToddlerFunThemeParser *) user_data;
 
 	if (strcmp (element_name, "objects") == 0) {
-		guint size = sizeof (GamineThemeObject);
+		guint size = sizeof (ToddlerFunThemeObject);
 		if (parser->theme->theme_objects == NULL) 
 			parser->theme->theme_objects = g_array_new (FALSE, TRUE, size);
 
 	} else if (strcmp (element_name, "object") == 0) {
-		GamineThemeObject obj;
-		memset (&obj, 0, sizeof (GamineThemeObject));
+		ToddlerFunThemeObject obj;
+		memset (&obj, 0, sizeof (ToddlerFunThemeObject));
 
 		while (*attribute_names != NULL) {
 			if (strcmp (*attribute_names, "sound") == 0) {
@@ -104,15 +104,15 @@ static GMarkupParser parser = {
 	parser_error
 };
 	
-GamineTheme *theme_new (void) 
+ToddlerFunTheme *theme_new (void) 
 {
-	return g_new0 (GamineTheme, 1);
+	return g_new0 (ToddlerFunTheme, 1);
 }
 
 void
-theme_read (GamineTheme *theme, gchar *filename)
+theme_read (ToddlerFunTheme *theme, gchar *filename)
 {
-	GamineThemeParser parseinfo;
+	ToddlerFunThemeParser parseinfo;
 	GMarkupParseContext *context;
 	gchar *xml;
 	gsize length;
@@ -150,18 +150,18 @@ theme_read_cleanup:
 	g_free (parseinfo.dirname);
 }
 
-GamineThemeObject *
-theme_get_object (GamineTheme *theme, gint i)
+ToddlerFunThemeObject *
+theme_get_object (ToddlerFunTheme *theme, gint i)
 {
 	if (theme->theme_objects != NULL) {
 		GArray *arr = theme->theme_objects;
-		return &g_array_index (arr, GamineThemeObject, i);
+		return &g_array_index (arr, ToddlerFunThemeObject, i);
 	}
 	return NULL;
 }
 
 gint
-theme_get_n_objects (GamineTheme *theme)
+theme_get_n_objects (ToddlerFunTheme *theme)
 {
 	if (theme->theme_objects != NULL)
 		return theme->theme_objects->len;
