@@ -12,3 +12,8 @@ Build dependencies include:
  - GTK+ 3.0
  - GStreamer 0.10
  - librsvg 2.0
+ 
+To build from git, you also need automake and friends.
+
+Ubuntu packages for a complete build system:
+ - gnome-common libgtk-3-dev libgstreamer0.10-dev librsvg2-dev
